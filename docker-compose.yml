@@ -9,6 +9,7 @@ services:
       COMPOSER_ALLOW_SUPERUSER: "1"
       COMPOSER_CACHE_DIR: /tmp/composer-cache
       GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
+      API_TOKEN: "${API_TOKEN:-product-dev-token}"
       DATABASE_URL: "mysql://product:product@mysql:3306/product?serverVersion=8.0&charset=utf8mb4"
     volumes:
       - ./:/workspace/product
