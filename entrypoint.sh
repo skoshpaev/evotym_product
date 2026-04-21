@@ -42,6 +42,7 @@ can_bootstrap_in_place() {
         ! -name 'Dockerfile' \
         ! -name 'docker-compose.yml' \
         ! -name 'entrypoint.sh' \
+        ! -name 'docker' \
         ! -name '.DS_Store' \
         -print -quit | grep -q .; then
         return 1
@@ -109,6 +110,10 @@ ensure_runtime_directories() {
     if [ ! -d "$PROJECT_DIR/templates" ]; then
         mkdir -p "$PROJECT_DIR/templates"
         touch "$PROJECT_DIR/templates/.gitkeep"
+    fi
+
+    if [ ! -d "$PROJECT_DIR/docker/nginx" ]; then
+        mkdir -p "$PROJECT_DIR/docker/nginx"
     fi
 
     chmod -R ug+rwX "$PROJECT_DIR/var" || true
