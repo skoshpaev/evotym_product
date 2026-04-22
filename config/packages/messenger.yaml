@@ -1,0 +1,52 @@
+framework:
+    messenger:
+        transports:
+            product_updated:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                serializer: App\Messenger\EventMessageSerializer
+                options:
+                    auto_setup: true
+                    confirm_timeout: 2
+                    exchange:
+                        name: product.events
+                        type: direct
+                        default_publish_routing_key: product.updated
+                    queues:
+                        product.updated:
+                            binding_keys: ['product.updated']
+
+            order_created:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                serializer: App\Messenger\EventMessageSerializer
+                failure_transport: order_created_failed
+                retry_strategy:
+                    max_retries: 5
+                    delay: 1000
+                    multiplier: 2
+                    max_delay: 30000
+                options:
+                    auto_setup: true
+                    confirm_timeout: 2
+                    exchange:
+                        name: order.events
+                        type: direct
+                    queues:
+                        order.created:
+                            binding_keys: ['order.created']
+
+            order_created_failed:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                serializer: App\Messenger\EventMessageSerializer
+                options:
+                    auto_setup: true
+                    confirm_timeout: 2
+                    exchange:
+                        name: order.events.dlq
+                        type: direct
+                        default_publish_routing_key: order.created.failed
+                    queues:
+                        order.created.failed:
+                            binding_keys: ['order.created.failed']
+
+        routing:
+            App\Message\ProductUpdatedMessage: product_updated
