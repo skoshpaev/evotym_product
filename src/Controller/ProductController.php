@@ -8,7 +8,7 @@ use App\Dto\CreateProductRequestDto;
 use App\Dto\ProductResponseDto;
 use App\Entity\Product;
 use App\Repository\ProductRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\ProductServiceInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -19,16 +19,9 @@ final class ProductController
     #[Route('', name: 'product_create', methods: ['POST'])]
     public function create(
         CreateProductRequestDto $createProductRequestDto,
-        EntityManagerInterface $entityManager,
+        ProductServiceInterface $productService,
     ): JsonResponse {
-        $product = Product::create(
-            $createProductRequestDto->name,
-            $createProductRequestDto->price,
-            $createProductRequestDto->quantity,
-        );
-
-        $entityManager->persist($product);
-        $entityManager->flush();
+        $product = $productService->create($createProductRequestDto);
 
         return new JsonResponse(
             ProductResponseDto::fromEntity($product)->toArray(),

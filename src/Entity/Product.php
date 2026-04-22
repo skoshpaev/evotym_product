@@ -61,6 +61,15 @@ final class Product
         return $this->quantity;
     }
 
+    public function syncQuantity(int $quantity): void
+    {
+        if ($quantity < 0) {
+            throw new \InvalidArgumentException('Quantity must be greater than or equal to zero.');
+        }
+
+        $this->quantity = $quantity;
+    }
+
     private static function normalizePrice(float $price): string
     {
         return number_format($price, 2, '.', '');
