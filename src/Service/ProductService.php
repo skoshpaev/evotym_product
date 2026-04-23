@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Dto\CreateProductRequestDto;
-use App\Dto\ProductResponseDto;
 use App\Entity\Product;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -26,9 +25,8 @@ final class ProductService implements ProductServiceInterface
         );
 
         $this->entityManager->persist($product);
+        $this->rabbitMQService->productUpdated($product);
         $this->entityManager->flush();
-
-        $this->rabbitMQService->productUpdated(ProductResponseDto::fromEntity($product));
 
         return $product;
     }

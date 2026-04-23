@@ -1,3 +1,4 @@
+# TEST PROJECT ONLY: ENV VALUES AND BUILT-IN CREDENTIALS IN THIS FILE ARE COMMITTED ONLY TO KEEP THE LOCAL TEST STACK SELF-CONTAINED.
 services:
   app:
     build:
@@ -6,6 +7,7 @@ services:
     working_dir: /workspace/product
     environment:
       APP_ENV: dev
+      APP_DEBUG: "0"
       COMPOSER_ALLOW_SUPERUSER: "1"
       COMPOSER_CACHE_DIR: /tmp/composer-cache
       GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
@@ -29,6 +31,7 @@ services:
     working_dir: /workspace/product
     environment:
       APP_ENV: dev
+      APP_DEBUG: "0"
       COMPOSER_ALLOW_SUPERUSER: "1"
       COMPOSER_CACHE_DIR: /tmp/composer-cache
       GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
@@ -41,6 +44,30 @@ services:
       mysql:
         condition: service_healthy
     command: ["php", "bin/console", "messenger:consume", "order_created", "--time-limit=3600", "--memory-limit=128M", "--no-interaction", "-vv"]
+    restart: unless-stopped
+    networks:
+      - default
+      - shared
+
+  publisher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /workspace/product
+    environment:
+      APP_ENV: dev
+      COMPOSER_ALLOW_SUPERUSER: "1"
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+      GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
+      API_TOKEN: "${API_TOKEN:-product-dev-token}"
+      DATABASE_URL: "mysql://product:product@mysql:3306/product?serverVersion=8.0&charset=utf8mb4"
+    volumes:
+      - ./:/workspace/product
+      - composer-cache:/tmp/composer-cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: ["sh", "-lc", "while true; do php bin/console app:publish-outbox; sleep 60; done"]
     restart: unless-stopped
     networks:
       - default
@@ -59,6 +86,7 @@ services:
   mysql:
     image: mysql:8.0
     environment:
+      # TEST PROJECT ONLY: THESE MYSQL CREDENTIALS ARE COMMITTED ONLY FOR LOCAL DEMO/QA CONVENIENCE.
       MYSQL_DATABASE: product
       MYSQL_USER: product
       MYSQL_PASSWORD: product
