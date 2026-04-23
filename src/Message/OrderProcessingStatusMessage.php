@@ -7,28 +7,37 @@ namespace App\Message;
 use DateTimeImmutable;
 use Symfony\Component\Uid\Uuid;
 
-final class OrderCreatedMessage
+final class OrderProcessingStatusMessage
 {
-    public const TYPE = 'order.created';
+    public const TYPE = 'order.processing.status';
+    public const STATUS_PROCESSED = 'processed';
+    public const STATUS_FAILED = 'failed';
 
     public function __construct(
         public readonly string $eventId,
         public readonly string $type,
         public readonly DateTimeImmutable $createdAt,
         public readonly string $orderId,
+        public readonly string $orderEventId,
         public readonly string $productId,
-        public readonly int $quantityOrdered,
-        public readonly int $expectedProductVersion,
+        public readonly string $status,
+        public readonly ?string $error,
     ) {
     }
 
-    public static function create(string $orderId, string $productId, int $quantityOrdered, int $expectedProductVersion): self
-    {
+    public static function create(
+        string $orderId,
+        string $orderEventId,
+        string $productId,
+        string $status,
+        ?string $error = null,
+    ): self {
         return self::fromPayload(
             $orderId,
+            $orderEventId,
             $productId,
-            $quantityOrdered,
-            $expectedProductVersion,
+            $status,
+            $error,
             Uuid::v7()->toRfc4122(),
             self::TYPE,
             new DateTimeImmutable(),
@@ -37,9 +46,10 @@ final class OrderCreatedMessage
 
     public static function fromPayload(
         string $orderId,
+        string $orderEventId,
         string $productId,
-        int $quantityOrdered,
-        int $expectedProductVersion,
+        string $status,
+        ?string $error = null,
         ?string $eventId = null,
         ?string $type = null,
         ?DateTimeImmutable $createdAt = null,
@@ -49,9 +59,10 @@ final class OrderCreatedMessage
             $type ?? self::TYPE,
             $createdAt ?? new DateTimeImmutable(),
             $orderId,
+            $orderEventId,
             $productId,
-            $quantityOrdered,
-            $expectedProductVersion,
+            $status,
+            $error,
         );
     }
 }

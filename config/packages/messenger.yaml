@@ -15,6 +15,20 @@ framework:
                         product.updated:
                             binding_keys: ['product.updated']
 
+            order_processing_status:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                serializer: App\Messenger\EventMessageSerializer
+                options:
+                    auto_setup: true
+                    confirm_timeout: 2
+                    exchange:
+                        name: order.processing.status.events
+                        type: direct
+                        default_publish_routing_key: order.processing.status
+                    queues:
+                        order.processing.status:
+                            binding_keys: ['order.processing.status']
+
             order_created:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 serializer: App\Messenger\EventMessageSerializer
@@ -50,3 +64,4 @@ framework:
 
         routing:
             App\Message\ProductUpdatedMessage: product_updated
+            App\Message\OrderProcessingStatusMessage: order_processing_status
