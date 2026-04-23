@@ -1,0 +1,11 @@
+framework:
+    messenger:
+        transports:
+            product_updated: 'in-memory://'
+            order_processing_status: 'in-memory://'
+            order_created: 'in-memory://'
+            order_created_failed: 'in-memory://'
+
+        routing:
+            App\Message\ProductUpdatedMessage: product_updated
+            App\Message\OrderProcessingStatusMessage: order_processing_status
