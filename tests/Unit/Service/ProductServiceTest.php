@@ -19,6 +19,7 @@ final class ProductServiceTest extends TestCase
         $rabbitMqService = $this->createMock(RabbitMQServiceInterface::class);
         $service = new ProductService($entityManager, $rabbitMqService);
         $dto = new CreateProductRequestDto('Coffee Mug', 12.99, 5);
+        $eventId = '019dbb30-c275-7fd2-8830-c3e124b6df52';
 
         $persistedProduct = null;
 
@@ -39,9 +40,15 @@ final class ProductServiceTest extends TestCase
                     && $product->getName() === 'Coffee Mug'
                     && $product->getPrice() === 12.99
                     && $product->getQuantity() === 5;
-            }));
+            }))
+            ->willReturn($eventId);
 
         $entityManager->expects(self::once())->method('flush');
+
+        $rabbitMqService
+            ->expects(self::once())
+            ->method('publishOutboxMessage')
+            ->with($eventId);
 
         $product = $service->create($dto);
 

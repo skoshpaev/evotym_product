@@ -25,8 +25,9 @@ final class ProductService implements ProductServiceInterface
         );
 
         $this->entityManager->persist($product);
-        $this->rabbitMQService->productUpdated($product);
+        $eventId = $this->rabbitMQService->productUpdated($product);
         $this->entityManager->flush();
+        $this->rabbitMQService->publishOutboxMessage($eventId);
 
         return $product;
     }

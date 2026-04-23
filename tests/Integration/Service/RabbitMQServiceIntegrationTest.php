@@ -1,4 +1,6 @@
-<?php
+<?php /** @noinspection SqlNoDataSourceInspection */
+
+/** @noinspection SqlResolve */
 
 declare(strict_types=1);
 
@@ -9,6 +11,12 @@ use App\Message\OrderCreatedMessage;
 use App\Repository\OutboxMessageRepository;
 use App\Service\RabbitMQServiceInterface;
 use App\Tests\Integration\DatabaseKernelTestCase;
+use Doctrine\DBAL\Exception;
+use Doctrine\ORM\Exception\ORMException;
+
+use JsonException;
+
+use function assert;
 
 final class RabbitMQServiceIntegrationTest extends DatabaseKernelTestCase
 {
@@ -17,17 +25,23 @@ final class RabbitMQServiceIntegrationTest extends DatabaseKernelTestCase
         return ['product_updated', 'order_processing_status', 'order_created', 'order_created_failed'];
     }
 
+    /**
+     * @throws Exception
+     * @throws ORMException
+     */
     public function testOrderCreatedReservesStockAndStoresInboxAndOutboxRecords(): void
     {
         $product = Product::create('Coffee Mug', 12.99, 5);
         $this->entityManager->persist($product);
         $this->entityManager->flush();
 
-        $service = static::getContainer()->get(RabbitMQServiceInterface::class);
-        $outboxRepository = static::getContainer()->get(OutboxMessageRepository::class);
+        $service = RabbitMQServiceIntegrationTest::getContainer()->get(RabbitMQServiceInterface::class);
+        $outboxRepository = RabbitMQServiceIntegrationTest::getContainer()->get(OutboxMessageRepository::class);
+        $statusTransport = $this->getTransport('order_processing_status');
+        $productTransport = $this->getTransport('product_updated');
 
-        \assert($service instanceof RabbitMQServiceInterface);
-        \assert($outboxRepository instanceof OutboxMessageRepository);
+        assert($service instanceof RabbitMQServiceInterface);
+        assert($outboxRepository instanceof OutboxMessageRepository);
 
         $message = OrderCreatedMessage::create(
             '019db9fd-a81e-7703-8f00-a27ee9795ff9',
@@ -43,8 +57,9 @@ final class RabbitMQServiceIntegrationTest extends DatabaseKernelTestCase
             'SELECT status FROM inbox WHERE event_id = ?',
             [$message->eventId],
         );
+        /** @noinspection SqlRedundantOrderingDirection */
         $outboxRows = $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT event_type FROM outbox ORDER BY created_at ASC',
+            'SELECT event_type, status FROM outbox ORDER BY created_at ASC',
         );
 
         self::assertSame(3, $product->getQuantity());
@@ -53,18 +68,27 @@ final class RabbitMQServiceIntegrationTest extends DatabaseKernelTestCase
         self::assertCount(2, $outboxRows);
         self::assertSame('order.processing.status', $outboxRows[0]['event_type']);
         self::assertSame('product.updated', $outboxRows[1]['event_type']);
-        self::assertCount(2, $outboxRepository->findCreatedOrdered());
+        self::assertSame('published', $outboxRows[0]['status']);
+        self::assertSame('published', $outboxRows[1]['status']);
+        self::assertCount(0, $outboxRepository->findCreatedOrdered());
+        self::assertCount(1, $statusTransport->getSent());
+        self::assertCount(1, $productTransport->getSent());
     }
 
+    /**
+     * @throws Exception
+     * @throws ORMException
+     * @throws JsonException
+     */
     public function testOrderCreatedRejectsVersionMismatchWithoutChangingStock(): void
     {
         $product = Product::create('Coffee Mug', 12.99, 5);
         $this->entityManager->persist($product);
         $this->entityManager->flush();
 
-        $service = static::getContainer()->get(RabbitMQServiceInterface::class);
+        $service = RabbitMQServiceIntegrationTest::getContainer()->get(RabbitMQServiceInterface::class);
 
-        \assert($service instanceof RabbitMQServiceInterface);
+        assert($service instanceof RabbitMQServiceInterface);
 
         $message = OrderCreatedMessage::create(
             '019db9fd-d2e5-7dcc-a5f2-327878166002',

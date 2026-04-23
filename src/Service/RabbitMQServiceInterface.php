@@ -9,9 +9,11 @@ use App\Message\OrderCreatedMessage;
 
 interface RabbitMQServiceInterface
 {
-    public function productUpdated(Product $product): void;
+    public function productUpdated(Product $product): string;
 
     public function orderCreated(OrderCreatedMessage $message): void;
+
+    public function publishOutboxMessage(string $eventId): bool;
 
     public function publishPendingOutbox(): int;
 }
