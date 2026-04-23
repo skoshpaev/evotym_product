@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service;
+
+use JsonException;
+
+final class IntegrationEventLogger
+{
+    /**
+     * @param array<string, scalar|null> $context
+     */
+    public function warning(string $message, array $context = []): void
+    {
+        $this->log('warning', $message, $context);
+    }
+
+    /**
+     * @param array<string, scalar|null> $context
+     *
+     * @noinspection PhpSameParameterValueInspection
+     */
+    private function log(string $level, string $message, array $context): void
+    {
+        try {
+            error_log(
+                (string)json_encode([
+                    'level'   => $level,
+                    'message' => $message,
+                    'context' => $context,
+                ], JSON_THROW_ON_ERROR)
+            );
+        } catch (JsonException) {
+            error_log(sprintf('[%s] %s', strtoupper($level), $message));
+        }
+    }
+}

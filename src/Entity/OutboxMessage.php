@@ -67,6 +67,11 @@ final class OutboxMessage
         return new self($eventId, $event, $productId, $eventType, $createdAt);
     }
 
+    public function getEventId(): string
+    {
+        return $this->eventId;
+    }
+
     /**
      * @return array<string, scalar|null>
      */
@@ -80,13 +85,28 @@ final class OutboxMessage
         return $this->eventType;
     }
 
+    public function isCreated(): bool
+    {
+        return $this->status === self::STATUS_CREATED;
+    }
+
     public function markPublished(): void
     {
         $this->status = self::STATUS_PUBLISHED;
     }
 
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
     public function getCreatedAt(): DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getProductId(): ?string
+    {
+        return $this->productId;
     }
 }

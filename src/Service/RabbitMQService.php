@@ -26,10 +26,11 @@ final class RabbitMQService implements RabbitMQServiceInterface
         private readonly InboxMessageRepository $inboxMessageRepository,
         private readonly OutboxMessageRepository $outboxMessageRepository,
         private readonly EntityManagerInterface $entityManager,
+        private readonly IntegrationEventLogger $integrationEventLogger,
     ) {
     }
 
-    public function productUpdated(Product $product): void
+    public function productUpdated(Product $product): string
     {
         $message = ProductUpdatedMessage::create(
             $product->getId(),
@@ -48,6 +49,8 @@ final class RabbitMQService implements RabbitMQServiceInterface
                 $message->createdAt,
             ),
         );
+
+        return $message->eventId;
     }
 
     public function orderCreated(OrderCreatedMessage $message): void
@@ -62,32 +65,35 @@ final class RabbitMQService implements RabbitMQServiceInterface
 
         if ($product === null) {
             $this->storeInboxResult($message, null, InboxMessage::STATUS_FAILED);
-            $this->storeOrderProcessingStatus(
+            $statusEventId = $this->storeOrderProcessingStatus(
                 $message,
                 OrderProcessingStatusMessage::STATUS_FAILED,
                 sprintf('Product "%s" was not found while applying order.created event.', $message->productId),
             );
             $this->entityManager->flush();
+            $this->publishOutboxMessage($statusEventId);
 
             return;
         }
 
         if ($this->isOldOrderMessage($product, $message)) {
             $this->storeInboxResult($message, $product->getId(), InboxMessage::STATUS_IGNORED);
-            $this->storeOrderProcessingStatus(
+            $statusEventId = $this->storeOrderProcessingStatus(
                 $message,
                 OrderProcessingStatusMessage::STATUS_FAILED,
                 'Stale order event received.',
             );
-            $this->productUpdated($product);
+            $productUpdatedEventId = $this->productUpdated($product);
             $this->entityManager->flush();
+            $this->publishOutboxMessage($statusEventId);
+            $this->publishOutboxMessage($productUpdatedEventId);
 
             return;
         }
 
         if ($message->expectedProductVersion !== $product->getVersion()) {
             $this->storeInboxResult($message, $product->getId(), InboxMessage::STATUS_FAILED);
-            $this->storeOrderProcessingStatus(
+            $statusEventId = $this->storeOrderProcessingStatus(
                 $message,
                 OrderProcessingStatusMessage::STATUS_FAILED,
                 sprintf(
@@ -96,8 +102,10 @@ final class RabbitMQService implements RabbitMQServiceInterface
                     $product->getVersion(),
                 ),
             );
-            $this->productUpdated($product);
+            $productUpdatedEventId = $this->productUpdated($product);
             $this->entityManager->flush();
+            $this->publishOutboxMessage($statusEventId);
+            $this->publishOutboxMessage($productUpdatedEventId);
 
             return;
         }
@@ -106,25 +114,40 @@ final class RabbitMQService implements RabbitMQServiceInterface
             $product->reserveQuantity($message->quantityOrdered);
         } catch (\InvalidArgumentException $exception) {
             $this->storeInboxResult($message, $product->getId(), InboxMessage::STATUS_FAILED);
-            $this->storeOrderProcessingStatus(
+            $statusEventId = $this->storeOrderProcessingStatus(
                 $message,
                 OrderProcessingStatusMessage::STATUS_FAILED,
                 $exception->getMessage(),
             );
-            $this->productUpdated($product);
+            $productUpdatedEventId = $this->productUpdated($product);
             $this->entityManager->flush();
+            $this->publishOutboxMessage($statusEventId);
+            $this->publishOutboxMessage($productUpdatedEventId);
 
             return;
         }
 
         $product->markOrderEventProcessed($message->createdAt);
         $this->storeInboxResult($message, $product->getId(), InboxMessage::STATUS_PROCESSED);
-        $this->storeOrderProcessingStatus(
+        $statusEventId = $this->storeOrderProcessingStatus(
             $message,
             OrderProcessingStatusMessage::STATUS_PROCESSED,
         );
-        $this->productUpdated($product);
+        $productUpdatedEventId = $this->productUpdated($product);
         $this->entityManager->flush();
+        $this->publishOutboxMessage($statusEventId);
+        $this->publishOutboxMessage($productUpdatedEventId);
+    }
+
+    public function publishOutboxMessage(string $eventId): bool
+    {
+        $outboxMessage = $this->outboxMessageRepository->find($eventId);
+
+        if (!$outboxMessage instanceof OutboxMessage || !$outboxMessage->isCreated()) {
+            return false;
+        }
+
+        return $this->publishMessage($outboxMessage);
     }
 
     public function publishPendingOutbox(): int
@@ -132,10 +155,9 @@ final class RabbitMQService implements RabbitMQServiceInterface
         $published = 0;
 
         foreach ($this->outboxMessageRepository->findCreatedOrdered() as $outboxMessage) {
-            $this->messageBus->dispatch($this->denormalizeOutboxMessage($outboxMessage));
-            $outboxMessage->markPublished();
-            $this->entityManager->flush();
-            ++$published;
+            if ($this->publishMessage($outboxMessage)) {
+                ++$published;
+            }
         }
 
         return $published;
@@ -166,7 +188,7 @@ final class RabbitMQService implements RabbitMQServiceInterface
         OrderCreatedMessage $message,
         string $status,
         ?string $error = null,
-    ): void {
+    ): string {
         $statusMessage = OrderProcessingStatusMessage::create(
             $message->orderId,
             $message->eventId,
@@ -184,6 +206,8 @@ final class RabbitMQService implements RabbitMQServiceInterface
                 $statusMessage->createdAt,
             ),
         );
+
+        return $statusMessage->eventId;
     }
 
     /**
@@ -263,6 +287,28 @@ final class RabbitMQService implements RabbitMQServiceInterface
             ),
             default => throw new \LogicException(sprintf('Unsupported outbox event type "%s".', $outboxMessage->getEventType())),
         };
+    }
+
+    private function publishMessage(OutboxMessage $outboxMessage): bool
+    {
+        try {
+            $this->messageBus->dispatch($this->denormalizeOutboxMessage($outboxMessage));
+            $outboxMessage->markPublished();
+            $this->entityManager->flush();
+
+            return true;
+        } catch (\Throwable $exception) {
+            $this->integrationEventLogger->warning(
+                'Outbox event publication failed and will be retried later.',
+                [
+                    'eventId' => $outboxMessage->getEventId(),
+                    'eventType' => $outboxMessage->getEventType(),
+                    'error' => $exception->getMessage(),
+                ],
+            );
+
+            return false;
+        }
     }
 
     private function assertOrderCreatedMessageIsValid(OrderCreatedMessage $message): void
