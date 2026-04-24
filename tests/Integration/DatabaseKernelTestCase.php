@@ -20,11 +20,12 @@ abstract class DatabaseKernelTestCase extends KernelTestCase
 
         self::bootKernel([
             'environment' => 'test',
-            'debug' => false,
+            'debug'       => false,
         ]);
 
         /** @var ManagerRegistry $doctrine */
         $doctrine = static::getContainer()->get(ManagerRegistry::class);
+        /** @noinspection PhpFieldAssignmentTypeMismatchInspection */
         $this->entityManager = $doctrine->getManager();
 
         $this->recreateSchema();
@@ -45,7 +46,7 @@ abstract class DatabaseKernelTestCase extends KernelTestCase
     {
         $transport = static::getContainer()->get(sprintf('messenger.transport.%s', $name));
 
-        \assert($transport instanceof InMemoryTransport);
+        assert($transport instanceof InMemoryTransport);
 
         return $transport;
     }

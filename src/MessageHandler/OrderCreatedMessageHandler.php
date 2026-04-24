@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Message\OrderCreatedMessage;
-use App\Service\RabbitMQServiceInterface;
+use App\Service\Api\RabbitMQServiceInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler(fromTransport: 'order_created')]

@@ -6,7 +6,7 @@ namespace App\Http\Resolver;
 
 use App\Dto\CreateProductRequestDto;
 use App\Exception\ApiValidationException;
-use JsonException;
+use Symfony\Component\HttpFoundation\Exception\JsonException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
@@ -15,8 +15,9 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class CreateProductRequestDtoResolver implements ValueResolverInterface
 {
-    public function __construct(private readonly ValidatorInterface $validator)
-    {
+    public function __construct(
+        private readonly ValidatorInterface $validator,
+    ) {
     }
 
     public function resolve(Request $request, ArgumentMetadata $argument): iterable
@@ -44,7 +45,7 @@ final class CreateProductRequestDtoResolver implements ValueResolverInterface
         $dto = new CreateProductRequestDto($name, $price, $quantity);
         $violations = $this->validator->validate($dto);
 
-        if (\count($violations) > 0) {
+        if (count($violations) > 0) {
             throw ApiValidationException::fromViolations($violations);
         }
 
@@ -52,8 +53,10 @@ final class CreateProductRequestDtoResolver implements ValueResolverInterface
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param array<string, mixed>        $payload
      * @param array<string, list<string>> $errors
+     *
+     * @noinspection PhpSameParameterValueInspection
      */
     private function extractString(array $payload, string $field, array &$errors): string
     {
@@ -63,7 +66,7 @@ final class CreateProductRequestDtoResolver implements ValueResolverInterface
             return '';
         }
 
-        if (!\is_string($payload[$field])) {
+        if (!is_string($payload[$field])) {
             $errors[$field][] = 'This field must be a string.';
 
             return '';
@@ -73,8 +76,10 @@ final class CreateProductRequestDtoResolver implements ValueResolverInterface
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param array<string, mixed>        $payload
      * @param array<string, list<string>> $errors
+     *
+     * @noinspection PhpSameParameterValueInspection
      */
     private function extractFloat(array $payload, string $field, array &$errors): float
     {
@@ -84,18 +89,20 @@ final class CreateProductRequestDtoResolver implements ValueResolverInterface
             return 0.0;
         }
 
-        if (!\is_int($payload[$field]) && !\is_float($payload[$field])) {
+        if (!is_int($payload[$field]) && !is_float($payload[$field])) {
             $errors[$field][] = 'This field must be a number.';
 
             return 0.0;
         }
 
-        return (float) $payload[$field];
+        return (float)$payload[$field];
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param array<string, mixed>        $payload
      * @param array<string, list<string>> $errors
+     *
+     * @noinspection PhpSameParameterValueInspection
      */
     private function extractInteger(array $payload, string $field, array &$errors): int
     {
@@ -105,7 +112,7 @@ final class CreateProductRequestDtoResolver implements ValueResolverInterface
             return 0;
         }
 
-        if (!\is_int($payload[$field])) {
+        if (!is_int($payload[$field])) {
             $errors[$field][] = 'This field must be an integer.';
 
             return 0;

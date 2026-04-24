@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpUnused */
 
 declare(strict_types=1);
 
@@ -13,9 +14,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'outbox')]
 final class OutboxMessage
 {
-    public const STATUS_CREATED = 'created';
-    public const STATUS_PUBLISHED = 'published';
-
     #[ORM\Id]
     #[ORM\Column(name: 'event_id', type: Types::STRING, length: 36, unique: true)]
     private string $eventId;
@@ -36,48 +34,35 @@ final class OutboxMessage
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private DateTimeImmutable $createdAt;
 
-    /**
-     * @param array<string, scalar|null> $event
-     */
-    private function __construct(
-        string $eventId,
-        array $event,
-        ?string $productId,
-        string $eventType,
-        DateTimeImmutable $createdAt,
-    ) {
-        $this->eventId = $eventId;
-        $this->event = $event;
-        $this->productId = $productId;
-        $this->eventType = $eventType;
-        $this->status = self::STATUS_CREATED;
-        $this->createdAt = $createdAt;
-    }
-
-    /**
-     * @param array<string, scalar|null> $event
-     */
-    public static function create(
-        string $eventId,
-        array $event,
-        ?string $productId,
-        string $eventType,
-        DateTimeImmutable $createdAt,
-    ): self {
-        return new self($eventId, $event, $productId, $eventType, $createdAt);
-    }
 
     public function getEventId(): string
     {
         return $this->eventId;
     }
 
-    /**
-     * @return array<string, scalar|null>
-     */
+    public function setEventId(string $eventId): void
+    {
+        $this->eventId = $eventId;
+    }
+
     public function getEvent(): array
     {
         return $this->event;
+    }
+
+    public function setEvent(array $event): void
+    {
+        $this->event = $event;
+    }
+
+    public function getProductId(): ?string
+    {
+        return $this->productId;
+    }
+
+    public function setProductId(?string $productId): void
+    {
+        $this->productId = $productId;
     }
 
     public function getEventType(): string
@@ -85,14 +70,9 @@ final class OutboxMessage
         return $this->eventType;
     }
 
-    public function isCreated(): bool
+    public function setEventType(string $eventType): void
     {
-        return $this->status === self::STATUS_CREATED;
-    }
-
-    public function markPublished(): void
-    {
-        $this->status = self::STATUS_PUBLISHED;
+        $this->eventType = $eventType;
     }
 
     public function getStatus(): string
@@ -100,13 +80,18 @@ final class OutboxMessage
         return $this->status;
     }
 
+    public function setStatus(string $status): void
+    {
+        $this->status = $status;
+    }
+
     public function getCreatedAt(): DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function getProductId(): ?string
+    public function setCreatedAt(DateTimeImmutable $createdAt): void
     {
-        return $this->productId;
+        $this->createdAt = $createdAt;
     }
 }
