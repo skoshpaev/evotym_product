@@ -43,7 +43,7 @@ final class ApiTokenAuthenticator extends AbstractAuthenticator
         }
 
         return new SelfValidatingPassport(
-            new UserBadge($providedToken, static fn (): ApiTokenUser => new ApiTokenUser()),
+            new UserBadge($providedToken, static fn(): ApiTokenUser => new ApiTokenUser()),
         );
     }
 
@@ -55,16 +55,15 @@ final class ApiTokenAuthenticator extends AbstractAuthenticator
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
         return new JsonResponse(
-            ['message' => $exception->getMessageKey()],
-            Response::HTTP_UNAUTHORIZED,
+            ['message' => $exception->getMessageKey()], Response::HTTP_UNAUTHORIZED,
         );
     }
 
+    /** @noinspection PhpUnusedParameterInspection */
     public function start(Request $request, AuthenticationException $authException = null): Response
     {
         return new JsonResponse(
-            ['message' => 'Authentication is required.'],
-            Response::HTTP_UNAUTHORIZED,
+            ['message' => 'Authentication is required.'], Response::HTTP_UNAUTHORIZED,
         );
     }
 }

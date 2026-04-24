@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\RabbitMQServiceInterface;
+use App\Repository\OutboxMessageRepository;
+use App\Service\Api\RabbitMQServiceInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -16,6 +17,7 @@ final class PublishOutboxCommand extends Command
 {
     public function __construct(
         private readonly RabbitMQServiceInterface $rabbitMQService,
+        private readonly OutboxMessageRepository $outboxMessageRepository,
     ) {
         parent::__construct();
     }
@@ -23,7 +25,8 @@ final class PublishOutboxCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $published = $this->rabbitMQService->publishPendingOutbox();
+        $createdProducts = $this->outboxMessageRepository->findCreatedOrdered();
+        $published = $this->rabbitMQService->publishPendingOutbox($createdProducts);
 
         $io->success(sprintf('Published %d outbox event(s).', $published));
 

@@ -7,15 +7,25 @@ namespace App\Tests\Unit\Messenger;
 use App\Message\OrderCreatedMessage;
 use App\Message\ProductUpdatedMessage;
 use App\Messenger\EventMessageSerializer;
+use App\Service\Api\RabbitMQServiceInterface;
+use DateTimeImmutable;
+use Exception;
+use JsonException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 
 final class EventMessageSerializerTest extends TestCase
 {
+    /**
+     * @throws Exception
+     */
     public function testEncodeAndDecodePreservesProductVersion(): void
     {
         $serializer = new EventMessageSerializer();
-        $message = ProductUpdatedMessage::create(
+        $message = new ProductUpdatedMessage(
+            '019db9fd-a933-785a-9485-247a36155e3f',
+            RabbitMQServiceInterface::MESSAGE_TYPE_PRODUCT_UPDATED,
+            new DateTimeImmutable('2026-04-23T10:58:22+00:00'),
             '019db9fd-5141-783b-804e-3f3d8ab184e7',
             'Coffee Mug',
             12.99,
@@ -32,19 +42,23 @@ final class EventMessageSerializerTest extends TestCase
         self::assertSame($message->quantity, $decoded->quantity);
     }
 
+    /**
+     * @throws JsonException
+     * @throws Exception
+     */
     public function testDecodeSupportsLegacyOrderCreatedPayload(): void
     {
         $serializer = new EventMessageSerializer();
         $encodedEnvelope = [
-            'body' => json_encode([
-                'eventId' => '019db9fd-a82a-7e90-a13c-ebb0e48c00b2',
-                'type' => OrderCreatedMessage::TYPE,
+            'body'    => json_encode([
+                'eventId'   => '019db9fd-a82a-7e90-a13c-ebb0e48c00b2',
+                'type'      => RabbitMQServiceInterface::MESSAGE_TYPE_ORDER_CREATED,
                 'createdAt' => '2026-04-23T10:58:22+00:00',
                 'productId' => '019db9fd-5141-783b-804e-3f3d8ab184e7',
-                'quantity' => 2,
+                'quantity'  => 2,
             ], JSON_THROW_ON_ERROR),
             'headers' => [
-                'type' => OrderCreatedMessage::class,
+                'type'         => OrderCreatedMessage::class,
                 'Content-Type' => 'application/json',
             ],
         ];

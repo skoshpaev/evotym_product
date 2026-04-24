@@ -6,8 +6,9 @@ namespace App\Tests\Unit\Service;
 
 use App\Dto\CreateProductRequestDto;
 use App\Entity\Product;
+use App\Service\Api\ProductServiceInterface;
+use App\Service\Api\RabbitMQServiceInterface;
 use App\Service\ProductService;
-use App\Service\RabbitMQServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -23,38 +24,32 @@ final class ProductServiceTest extends TestCase
 
         $persistedProduct = null;
 
-        $entityManager
-            ->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(static function (object $entity) use (&$persistedProduct): bool {
-                $persistedProduct = $entity;
+        $entityManager->expects(self::once())->method('persist')->with(
+                self::callback(static function (object $entity) use (&$persistedProduct): bool {
+                    $persistedProduct = $entity;
 
-                return $entity instanceof Product;
-            }));
+                    return $entity instanceof Product;
+                })
+            );
 
-        $rabbitMqService
-            ->expects(self::once())
-            ->method('productUpdated')
-            ->with(self::callback(static function (Product $product) use (&$persistedProduct): bool {
-                return $persistedProduct === $product
-                    && $product->getName() === 'Coffee Mug'
-                    && $product->getPrice() === 12.99
-                    && $product->getQuantity() === 5;
-            }))
-            ->willReturn($eventId);
+        $rabbitMqService->expects(self::once())->method('productUpdated')->with(
+                self::callback(static function (Product $product) use (&$persistedProduct): bool {
+                    return $persistedProduct === $product
+                        && $product->getName() === 'Coffee Mug'
+                        && $product->getPrice() === 12.99
+                        && $product->getQuantity() === 5;
+                })
+            )->willReturn($eventId);
 
         $entityManager->expects(self::once())->method('flush');
 
-        $rabbitMqService
-            ->expects(self::once())
-            ->method('publishOutboxMessage')
-            ->with($eventId);
+        $rabbitMqService->expects(self::once())->method('publishOutboxMessage')->with($eventId);
 
         $product = $service->create($dto);
 
-        self::assertInstanceOf(Product::class, $product);
         self::assertSame('Coffee Mug', $product->getName());
         self::assertSame(12.99, $product->getPrice());
         self::assertSame(5, $product->getQuantity());
+        self::assertSame(ProductServiceInterface::INITIAL_VERSION, $product->getVersion());
     }
 }

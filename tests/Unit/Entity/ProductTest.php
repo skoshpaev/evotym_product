@@ -9,36 +9,29 @@ use PHPUnit\Framework\TestCase;
 
 final class ProductTest extends TestCase
 {
-    public function testReserveQuantityDecreasesStockAndIncrementsVersion(): void
+    public function testSettersStoreProductFields(): void
     {
-        $product = Product::create('Coffee Mug', 12.99, 5);
+        $product = new Product();
+        $product->setId('019db9fd-5141-783b-804e-3f3d8ab184e7');
+        $product->setName('Coffee Mug');
+        $product->setPrice(12.99);
+        $product->setQuantity(5);
+        $product->setVersion(1);
 
-        self::assertSame(1, $product->getVersion());
-        self::assertSame(5, $product->getQuantity());
-
-        $product->reserveQuantity(2);
-
-        self::assertSame(3, $product->getQuantity());
-        self::assertSame(2, $product->getVersion());
-    }
-
-    public function testSyncQuantityKeepsVersionWhenValueDoesNotChange(): void
-    {
-        $product = Product::create('Coffee Mug', 12.99, 5);
-
-        $product->syncQuantity(5);
-
+        self::assertSame('019db9fd-5141-783b-804e-3f3d8ab184e7', $product->getId());
+        self::assertSame('Coffee Mug', $product->getName());
+        self::assertSame(12.99, $product->getPrice());
         self::assertSame(5, $product->getQuantity());
         self::assertSame(1, $product->getVersion());
     }
 
-    public function testReserveQuantityRejectsQuantityAboveAvailableStock(): void
+    public function testLastOrderEventAtCanBeUpdated(): void
     {
-        $product = Product::create('Coffee Mug', 12.99, 5);
+        $product = new Product();
+        $createdAt = new \DateTimeImmutable('2026-04-24T10:00:00+00:00');
 
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Ordered quantity exceeds available stock.');
+        $product->setLastOrderEventAt($createdAt);
 
-        $product->reserveQuantity(6);
+        self::assertSame($createdAt, $product->getLastOrderEventAt());
     }
 }
