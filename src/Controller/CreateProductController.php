@@ -14,11 +14,15 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/products', name: 'product_create', methods: ['POST'])]
 final class CreateProductController
 {
+    public function __construct(
+        private readonly ProductServiceInterface $productService,
+    ) {
+    }
+
     public function __invoke(
         CreateProductRequestDto $createProductRequestDto,
-        ProductServiceInterface $productService,
     ): JsonResponse {
-        $product = $productService->create($createProductRequestDto);
+        $product = $this->productService->create($createProductRequestDto);
 
         return new JsonResponse(
             ProductViewDto::fromProduct($product)->toArray(),

@@ -21,6 +21,7 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+            - '../src/Service/Api/'
 
     App\Controller\:
         resource: '../src/Controller/'
@@ -35,16 +36,16 @@ services:
         tags:
             - { name: controller.argument_value_resolver, priority: 200 }
 
-    App\Api\ProductServiceIntrerface:
+    App\Service\Api\ProductServiceInterface:
         alias: App\Service\ProductService
 
-    App\Api\RabbitMQServiceIntrerface:
+    App\Service\Api\RabbitMQServiceInterface:
         alias: App\Service\RabbitMQService
 
-    App\Api\IntegrationEventLoggerServiceIntrerface:
+    App\Service\Api\IntegrationEventLoggerServiceInterface:
         alias: App\Service\IntegrationEventLoggerService
 
-    App\Api\PoisonMessageRecorderServiceIntrerface:
+    App\Service\Api\PoisonMessageRecorderServiceInterface:
         alias: App\Service\PoisonMessageRecorderService
 
     # add more service definitions when explicit configuration is needed

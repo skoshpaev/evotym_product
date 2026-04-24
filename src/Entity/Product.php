@@ -38,6 +38,7 @@ final class Product extends AbstractProduct
     public function setQuantity(int $quantity): void
     {
         $this->quantity = $quantity;
+
     }
 
     public function getVersion(): int
