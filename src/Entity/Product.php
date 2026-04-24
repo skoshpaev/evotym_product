@@ -8,27 +8,14 @@ use App\Repository\ProductRepository;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Evotym\SharedBundle\Entity\AbstractProduct;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 #[ORM\Table(name: 'products')]
-final class Product
+final class Product extends AbstractProduct
 {
-    public const NAME_MAX_LENGTH = 255;
     public const INITIAL_VERSION = 1;
-
-    #[ORM\Id]
-    #[ORM\Column(type: Types::STRING, length: 36, unique: true)]
-    private string $id;
-
-    #[ORM\Column(length: self::NAME_MAX_LENGTH)]
-    private string $name;
-
-    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
-    private string $price;
-
-    #[ORM\Column(type: Types::INTEGER)]
-    private int $quantity;
 
     #[ORM\Column(type: Types::INTEGER)]
     private int $version = self::INITIAL_VERSION;
@@ -38,35 +25,12 @@ final class Product
 
     private function __construct(string $id, string $name, float $price, int $quantity)
     {
-        $this->id = $id;
-        $this->name = $name;
-        $this->price = self::normalizePrice($price);
-        $this->quantity = self::normalizeQuantity($quantity);
+        $this->initializeProduct($id, $name, $price, $quantity);
     }
 
     public static function create(string $name, float $price, int $quantity): self
     {
         return new self(Uuid::v7()->toRfc4122(), $name, $price, $quantity);
-    }
-
-    public function getId(): string
-    {
-        return $this->id;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getPrice(): float
-    {
-        return (float) $this->price;
-    }
-
-    public function getQuantity(): int
-    {
-        return $this->quantity;
     }
 
     public function getVersion(): int
@@ -96,7 +60,7 @@ final class Product
             throw new \InvalidArgumentException('Ordered quantity exceeds available stock.');
         }
 
-        $this->quantity -= $quantity;
+        $this->decreaseQuantity($quantity);
         ++$this->version;
     }
 
@@ -108,19 +72,5 @@ final class Product
     public function markOrderEventProcessed(DateTimeImmutable $createdAt): void
     {
         $this->lastOrderEventAt = $createdAt;
-    }
-
-    private static function normalizePrice(float $price): string
-    {
-        return number_format($price, 2, '.', '');
-    }
-
-    private static function normalizeQuantity(int $quantity): int
-    {
-        if ($quantity < 0) {
-            throw new \InvalidArgumentException('Quantity must be greater than or equal to zero.');
-        }
-
-        return $quantity;
     }
 }
