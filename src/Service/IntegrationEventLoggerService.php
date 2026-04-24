@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Service\Api\IntegrationEventLoggerServiceInterface;
 use JsonException;
 
-final class IntegrationEventLogger
+final class IntegrationEventLoggerService implements IntegrationEventLoggerServiceInterface
 {
     /**
      * @param array<string, scalar|null> $context
@@ -25,8 +26,8 @@ final class IntegrationEventLogger
     {
         try {
             error_log(
-                (string)json_encode([
-                    'level'   => $level,
+                (string) json_encode([
+                    'level' => $level,
                     'message' => $message,
                     'context' => $context,
                 ], JSON_THROW_ON_ERROR)

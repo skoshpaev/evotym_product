@@ -14,8 +14,9 @@ use Symfony\Component\Uid\Uuid;
 
 final class ProductValueResolver implements ValueResolverInterface
 {
-    public function __construct(private readonly ProductRepository $productRepository)
-    {
+    public function __construct(
+        private readonly ProductRepository $productRepository,
+    ) {
     }
 
     public function resolve(Request $request, ArgumentMetadata $argument): iterable
@@ -26,7 +27,7 @@ final class ProductValueResolver implements ValueResolverInterface
 
         $id = $request->attributes->get('id');
 
-        if (!\is_string($id) || !Uuid::isValid($id)) {
+        if (!is_string($id) || !Uuid::isValid($id)) {
             throw new NotFoundHttpException('Product not found.');
         }
 

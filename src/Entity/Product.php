@@ -9,28 +9,35 @@ use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Evotym\SharedBundle\Entity\AbstractProduct;
-use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 #[ORM\Table(name: 'products')]
 final class Product extends AbstractProduct
 {
-    public const INITIAL_VERSION = 1;
-
     #[ORM\Column(type: Types::INTEGER)]
-    private int $version = self::INITIAL_VERSION;
+    private int $version;
 
     #[ORM\Column(name: 'last_order_event_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?DateTimeImmutable $lastOrderEventAt = null;
 
-    private function __construct(string $id, string $name, float $price, int $quantity)
+    public function setId(string $id): void
     {
-        $this->initializeProduct($id, $name, $price, $quantity);
+        $this->id = $id;
     }
 
-    public static function create(string $name, float $price, int $quantity): self
+    public function setName(string $name): void
     {
-        return new self(Uuid::v7()->toRfc4122(), $name, $price, $quantity);
+        $this->name = $name;
+    }
+
+    public function setPrice(float $price): void
+    {
+        $this->price = number_format($price, 2, '.', '');
+    }
+
+    public function setQuantity(int $quantity): void
+    {
+        $this->quantity = $quantity;
     }
 
     public function getVersion(): int
@@ -38,30 +45,9 @@ final class Product extends AbstractProduct
         return $this->version;
     }
 
-    public function syncQuantity(int $quantity): void
+    public function setVersion(int $version): void
     {
-        $normalizedQuantity = self::normalizeQuantity($quantity);
-
-        if ($normalizedQuantity === $this->quantity) {
-            return;
-        }
-
-        $this->quantity = $normalizedQuantity;
-        ++$this->version;
-    }
-
-    public function reserveQuantity(int $quantity): void
-    {
-        if ($quantity <= 0) {
-            throw new \InvalidArgumentException('Reserved quantity must be greater than zero.');
-        }
-
-        if ($quantity > $this->quantity) {
-            throw new \InvalidArgumentException('Ordered quantity exceeds available stock.');
-        }
-
-        $this->decreaseQuantity($quantity);
-        ++$this->version;
+        $this->version = $version;
     }
 
     public function getLastOrderEventAt(): ?DateTimeImmutable
@@ -69,8 +55,8 @@ final class Product extends AbstractProduct
         return $this->lastOrderEventAt;
     }
 
-    public function markOrderEventProcessed(DateTimeImmutable $createdAt): void
+    public function setLastOrderEventAt(?DateTimeImmutable $lastOrderEventAt): void
     {
-        $this->lastOrderEventAt = $createdAt;
+        $this->lastOrderEventAt = $lastOrderEventAt;
     }
 }
