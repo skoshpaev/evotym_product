@@ -22,7 +22,7 @@
 Если именно отдельно:
 
 ```bash
-cd /Users/koshpaevsv/Evotym/product
+cd product
 docker compose up -d --build
 ```
 
@@ -78,7 +78,7 @@ cd /workspace/product && vendor/bin/phpunit -c phpunit.dist.xml
 С хоста, если сервис поднят через корневой compose:
 
 ```bash
-docker compose -f /Users/koshpaevsv/Evotym/docker-compose.yaml exec -T product-app vendor/bin/phpunit -c phpunit.dist.xml
+docker compose -f ../docker-compose.yaml exec -T product-app vendor/bin/phpunit -c phpunit.dist.xml
 ```
 
 ## Что внутри
@@ -89,10 +89,3 @@ docker compose -f /Users/koshpaevsv/Evotym/docker-compose.yaml exec -T product-a
 - consumer для `order.created`
 - inbox для входящих событий
 - bearer token auth только на `/products`
-
-Если надо быстро понять, жив ли контейнер:
-
-```bash
-php bin/console about
-php bin/console cache:clear
-```
